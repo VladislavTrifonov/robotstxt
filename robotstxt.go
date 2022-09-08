@@ -210,7 +210,7 @@ func (r *RobotsData) TestGroup(path string, group *Group) bool {
 	return group.Test(path)
 }
 
-// Returns true if all urls disallowed
+// Returns true if all urls allowed
 func (r *RobotsData) TestDisallowAll() bool {
 	return !r.disallowAll
 }
