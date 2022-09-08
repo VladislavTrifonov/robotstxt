@@ -223,11 +223,33 @@ Sitemap:
 func TestFromString11(t *testing.T){
 	t.Parallel()
 	r, err := FromString(`
-user-agent: Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Mobile Safari/537.36 (compatible; EzLynx/0.1; +http://www.ezoic.com/bot.html)
+user-agent: Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Mobile Safari/537.36 (compatible; EzLynx/0.1; +http://www.mybot.com/bot.html)
 Allow: /`)
 	require.NoError(t, err)
-	expectAccess(t, r, false, "/", "Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Mobile Safari/537.36 (compatible; EzLynx/0.1; +http://www.ezoic.com/bot.html)")
+	expectAccess(t, r, true, "/", "Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Mobile Safari/537.36 (compatible; EzLynx/0.1; +http://www.mybot.com/bot.html)")
 }
+
+// Test with Allow before a User-Agen
+func TestFromString012(t *testing.T){
+	t.Parallel()
+	r, err := FromString(`
+User-Agent: mybot
+Allow: /photos/
+Allow: /images/
+Disallow: /
+	
+User-Agent: *
+Allow: /photos/
+Disallow: /`)
+	require.NoError(t, err)
+	expectNoAccess(t, r, true)
+	expectAccess(t, r, true, "/photos/","mybot")
+	expectAccess(t, r, true, "/images/","mybot")
+	expectAccess(t, r, true, "/photos/","yourbot")
+	expectAccess(t, r, false, "/","mybot")
+	expectAccess(t, r, false, "/","yourbot")
+}
+
 
 func TestInvalidEncoding(t *testing.T) {
 	// Invalid UTF-8 encoding should not break parser.
@@ -295,14 +317,14 @@ func TestHost(t *testing.T) {
 	}
 }
 
-func TestChemicalaid(t *testing.T) {
-	const robotsChemicalaid = ("# Tier 0\nUser-agent: Googlebot\nUser-agent: Googlebot-Mobile\nUser-agent: Yandex # Russia\nDisallow: /admin/\nAllow: /\n#Crawl-delay: 1\n\n# Tier 1\nUser-agent: Bingbot # Bing\nUser-agent: Slurp # Yahoo\nUser-agent: coccoc # Vietnam\nUser-agent: DuckDuckBot # DuckDuckGo\nUser-agent: baiduspider # China\nUser-agent: Applebot # Apple\nDisallow: /admin/\nAllow: /\n#Crawl-delay: 10\n\n# Tier 1.5\nUser-agent: SeznamBot # Czech Republic\nUser-agent: NaverBot # South Korea\nUser-agent: Yeti # South Korea\nUser-agent: Mail.ru # Russia\nUser-agent: Sogou # China\nUser-agent: 360Spider # China\nDisallow: /admin/\nAllow: /\n#Crawl-delay: 30\n\n# Tier 2\nUser-agent: Teoma # Ask\n" +
-		"User-agent: SputnikBot # Russia\nUser-agent: Daumoa # South Korea\nUser-agent: Dazoobot # France\nUser-agent: DeuSu # Germany\nUser-agent: EuripBot # Europe\nUser-agent: Exploratodo # Latin America\nUser-agent: istellabot # Italy\nUser-agent: moget # Japan\nUser-agent: ichiro # Japan\nUser-agent: Petalbot # Huawei\nUser-agent: Amazonbot\nUser-agent: Neevabot\nDisallow: /admin/\nAllow: /\n#Crawl-delay: 60\nCrawl-delay: 15\n\n# Tier 2.5\nUser-agent: Googlebot-News\nUser-agent: Googlebot-Video\nUser-agent: Googlebot-Image\nUser-agent: AdsBot-Google\nUser-agent: BingPreview\nUser-agent: msnbot\nUser-agent: msnbot-media\nDisallow: /admin/\nAllow: /\n#Crawl-delay: 90\n\n# Tier 3\n#User-agent: ccbot # commoncrawl.org\n#Disallow: /admin/\n#Allow: /\n#Crawl-delay: 120\n\n# Ads\nUser-agent: Mediapartners-Google\nUser-agent: ias_crawler\nUser-agent: GrapeshotCrawler\nUser-agent: CriteoBot\nUser-agent: TTD-Content\nUser-agent: weborama-fetcher\nUser-agent: AmazonAdBot\nDisallow: /admin/\nAllow: /\n\n# Blocked\nUser-agent: AhrefsBot\nUser-agent: SemrushBot\nUser-agent: BLEXBot\nUser-agent: EzoicBot\nDisallow: /\n\nUser-agent: *\nDisallow: /\n\nSitemap: https://www.chemicalaid.com/sitemap.php")
+func TestTheaid(t *testing.T) {
+	const robotsTheaid = ("# Tier 0\nUser-agent: Googlebot\nUser-agent: Googlebot-Mobile\nUser-agent: Yandex # Russia\nDisallow: /admin/\nAllow: /\n#Crawl-delay: 1\n\n# Tier 1\nUser-agent: Bingbot # Bing\nUser-agent: Slurp # Yahoo\nUser-agent: coccoc # Vietnam\nUser-agent: DuckDuckBot # DuckDuckGo\nUser-agent: baiduspider # China\nUser-agent: Applebot # Apple\nDisallow: /admin/\nAllow: /\n#Crawl-delay: 10\n\n# Tier 1.5\nUser-agent: SeznamBot # Czech Republic\nUser-agent: NaverBot # South Korea\nUser-agent: Yeti # South Korea\nUser-agent: Mail.ru # Russia\nUser-agent: Sogou # China\nUser-agent: 360Spider # China\nDisallow: /admin/\nAllow: /\n#Crawl-delay: 30\n\n# Tier 2\nUser-agent: Teoma # Ask\n" +
+		"User-agent: SputnikBot # Russia\nUser-agent: Daumoa # South Korea\nUser-agent: Dazoobot # France\nUser-agent: DeuSu # Germany\nUser-agent: EuripBot # Europe\nUser-agent: Exploratodo # Latin America\nUser-agent: istellabot # Italy\nUser-agent: moget # Japan\nUser-agent: ichiro # Japan\nUser-agent: Petalbot # Huawei\nUser-agent: Amazonbot\nUser-agent: Neevabot\nDisallow: /admin/\nAllow: /\n#Crawl-delay: 60\nCrawl-delay: 15\n\n# Tier 2.5\nUser-agent: Googlebot-News\nUser-agent: Googlebot-Video\nUser-agent: Googlebot-Image\nUser-agent: AdsBot-Google\nUser-agent: BingPreview\nUser-agent: msnbot\nUser-agent: msnbot-media\nDisallow: /admin/\nAllow: /\n#Crawl-delay: 90\n\n# Tier 3\n#User-agent: ccbot # commoncrawl.org\n#Disallow: /admin/\n#Allow: /\n#Crawl-delay: 120\n\n# Ads\nUser-agent: Mediapartners-Google\nUser-agent: ias_crawler\nUser-agent: GrapeshotCrawler\nUser-agent: CriteoBot\nUser-agent: TTD-Content\nUser-agent: weborama-fetcher\nUser-agent: AmazonAdBot\nDisallow: /admin/\nAllow: /\n\n# Blocked\nUser-agent: AhrefsBot\nUser-agent: SemrushBot\nUser-agent: BLEXBot\nUser-agent: MyBot\nDisallow: /\n\nUser-agent: *\nDisallow: /\n\nSitemap: https://www.chemicalaid.com/sitemap.php")
 
 	t.Parallel()
-	r, err := FromString(robotsChemicalaid)
+	r, err := FromString(robotsTheaid)
 	require.NoError(t, err)
-	expectAccess(t, r, false, "/", "EzoicBot")
+	expectAccess(t, r, false, "/", "MyBot")
 }
 
 /*
@@ -429,16 +451,16 @@ func expectAll(t *testing.T, r *RobotsData, allow bool) {
 	expectAllAgents(t, r, allow, "/.htaccess")
 }
 
-func expectNoAccess(t *testing.T, r *RobotsData, allow bool) {
-	// TODO fuzz path
-	expectAllAgents(t, r, allow, "/")
-}
 
 func expectAllAgents(t *testing.T, r *RobotsData, allow bool, path string) {
 	f := func(agent string) bool { return expectAccess(t, r, allow, path, agent) }
 	if err := quick.Check(f, nil); err != nil {
 		t.Fatalf("Expected allow path '%s' %v", path, err)
 	}
+}
+
+func expectNoAccess(t *testing.T, r *RobotsData, allow bool) bool {
+	return assert.Equal(t, allow, r.TestDisallowAll())
 }
 
 func expectAccess(t *testing.T, r *RobotsData, allow bool, path, agent string) bool {
