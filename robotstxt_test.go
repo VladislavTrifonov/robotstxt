@@ -105,7 +105,7 @@ func TestFromString003(t *testing.T) {
 }
 
 // Test with extra space before ":"
-func TestFromString004(t *testing.T){
+func TestFromString004(t *testing.T) {
 	t.Parallel()
 	r, err := FromString(`
 User-Agent: *
@@ -118,7 +118,7 @@ Disallow : /*guestbook*`)
 }
 
 // Test with Allow before a User-Agen
-func TestFromString005(t *testing.T){
+func TestFromString005(t *testing.T) {
 	t.Parallel()
 	r, err := FromString(`
 Allow: /wp-admin/admin-ajax.php
@@ -147,7 +147,7 @@ func TestFromString006(t *testing.T) {
 User-agent: *
 Crawl-delay: / `)
 	require.NoError(t, err)
-	expectCrawlDelay(t, r, "*", 0 * time.Second)
+	expectCrawlDelay(t, r, "*", 0*time.Second)
 }
 
 // Test with a valid Crawl-delay
@@ -158,11 +158,11 @@ func TestFromString007(t *testing.T) {
 User-agent: bot
 Crawl-delay: 100`)
 	require.NoError(t, err)
-	expectCrawlDelay(t, r, "bot", 100 * time.Second)
+	expectCrawlDelay(t, r, "bot", 100*time.Second)
 }
 
 // Test with misspelling of user-agent
-func TestFromString008(t *testing.T){
+func TestFromString008(t *testing.T) {
 	t.Parallel()
 	r, err := FromString(`
 Usser-agent: *
@@ -173,10 +173,26 @@ Sitemap: https://www.prefix.ph/sitemap_index.xml`)
 	expectAllAgents(t, r, true, "/")
 }
 
+func TestFindGroupAgent(t *testing.T) {
+	const robotsTextSimple = `user-agent: wall-e
+disallow: /
+user-agent: *
+allow: /`
 
+	r, err := FromString(robotsTextSimple)
+	require.NoError(t, err)
+
+	group := r.FindGroup("eve")
+	require.NotNil(t, group)
+	assert.Equal(t, "*", group.Agent)
+
+	group = r.FindGroup("wall-e")
+	require.NotNil(t, group)
+	assert.Equal(t, "wall-e", group.Agent)
+}
 
 // Test with misspelling of user-agent
-func TestFromString009(t *testing.T){
+func TestFromString009(t *testing.T) {
 	t.Parallel()
 	r, err := FromString(`
 #
@@ -187,7 +203,7 @@ Allow: /`)
 }
 
 // Test with misspelling of user-agent
-func TestFromString010(t *testing.T){
+func TestFromString010(t *testing.T) {
 	t.Parallel()
 	r, err := FromString(`
 #
@@ -220,7 +236,7 @@ Sitemap:
 }
 
 // Test with misspelling of user-agent
-func TestFromString11(t *testing.T){
+func TestFromString11(t *testing.T) {
 	t.Parallel()
 	r, err := FromString(`
 user-agent: Mozilla/5.0 (Linux; Android 8.0; Pixel 2 Build/OPD3.170816.012) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.121 Mobile Safari/537.36 (compatible; EzLynx/0.1; +http://www.mybot.com/bot.html)
@@ -230,7 +246,7 @@ Allow: /`)
 }
 
 // Test with Allow before a User-Agen
-func TestFromString012(t *testing.T){
+func TestFromString012(t *testing.T) {
 	t.Parallel()
 	r, err := FromString(`
 User-Agent: mybot
@@ -243,13 +259,12 @@ Allow: /photos/
 Disallow: /`)
 	require.NoError(t, err)
 	expectNoAccess(t, r, true)
-	expectAccess(t, r, true, "/photos/","mybot")
-	expectAccess(t, r, true, "/images/","mybot")
-	expectAccess(t, r, true, "/photos/","yourbot")
-	expectAccess(t, r, false, "/","mybot")
-	expectAccess(t, r, false, "/","yourbot")
+	expectAccess(t, r, true, "/photos/", "mybot")
+	expectAccess(t, r, true, "/images/", "mybot")
+	expectAccess(t, r, true, "/photos/", "yourbot")
+	expectAccess(t, r, false, "/", "mybot")
+	expectAccess(t, r, false, "/", "yourbot")
 }
-
 
 func TestInvalidEncoding(t *testing.T) {
 	// Invalid UTF-8 encoding should not break parser.
@@ -354,7 +369,6 @@ func TestParseErrors(t *testing.T) {
 }
 */
 
-
 const robotsTextJustHTML = `<!DOCTYPE html>
 <html>
 <title></title>
@@ -450,7 +464,6 @@ func expectAll(t *testing.T, r *RobotsData, allow bool) {
 	expectAllAgents(t, r, allow, "/search")
 	expectAllAgents(t, r, allow, "/.htaccess")
 }
-
 
 func expectAllAgents(t *testing.T, r *RobotsData, allow bool, path string) {
 	f := func(agent string) bool { return expectAccess(t, r, allow, path, agent) }

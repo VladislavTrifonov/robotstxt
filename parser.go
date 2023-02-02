@@ -50,6 +50,7 @@ func parseGroupMap(groups map[string]*Group, agents []string, fun func(*Group)) 
 	for _, a := range agents {
 		if g = groups[a]; g == nil {
 			g = new(Group)
+			g.Agent = a
 			groups[a] = g
 		}
 		fun(g)
