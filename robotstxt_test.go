@@ -425,6 +425,40 @@ disallow: /c`
 	expectAccess(t, r, false, "/c", "c")
 }
 
+func TestCleanParam(t *testing.T) {
+	const robotsWithCleanParam = `User-agent: *
+Disallow: /webstat
+Disallow: /wp-
+Allow: /wp-admin/admin-ajax.php
+Disallow: /?                   # All query parameters on the home page.
+Disallow: *?s=                 # Search.
+Disallow: *&s=                 # Search.
+Allow: /*ajax
+Disallow:
+Clean-param: from&sortby&ms&sort&ingredients_with
+Clean-param: ref /forum/showthread.php
+Clean-param: counter&ref /forum/script/*.php
+Allow: /wp-*.gif
+`
+	r, err := FromString(robotsWithCleanParam)
+	assert.Nil(t, err)
+	assert.NotNil(t, r)
+	tests := map[string]string{
+		"https://example.com/recipe/321?from=jopa&to=huy&sort=asc":                                                         "https://example.com/recipe/321?to=huy",
+		"https://example.com/recipe/231?ms=test&ms=test2&ingredients_with=potato&ingredients_with=carrot&another_param=32": "https://example.com/recipe/231?another_param=32",
+		"https://example.com/recipe/42?from=google&sortby=ingredients&sort=asc&ingredients_with=carrot":                    "https://example.com/recipe/42",
+		"https://example.com/forum/showthread.php?ref=google&sort=asc&another_param=42":                                    "https://example.com/forum/showthread.php?another_param=42&sort=asc",
+		"https://example.com/forum/script/42.php?counter=42&ref=yandex&another_param=69&sort=asc":                          "https://example.com/forum/script/42.php?another_param=69&sort=asc",
+		"https://example.com/forum/script/abc.php?counter=42&ref=yandex&another_param=69&sort=asc":                         "https://example.com/forum/script/abc.php?another_param=69&sort=asc",
+	}
+
+	for tst, exp := range tests {
+		act, err := r.FindGroup("*").CleanParamsString(tst)
+		assert.Nil(t, err)
+		assert.Equal(t, exp, act)
+	}
+}
+
 func BenchmarkParseFromString001(b *testing.B) {
 	input := robotsText001
 	b.ReportAllocs()

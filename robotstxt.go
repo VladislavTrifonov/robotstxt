@@ -13,6 +13,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"strings"
@@ -20,10 +21,10 @@ import (
 )
 
 const (
-	AnyGroupId                   = "*"
-	regexToRemoveAllPairTagsHTML = `<.*?>.*?</.*?>|<.*?>|<!.*?>`
+	AnyGroupId                    = "*"
+	regexToRemoveAllPairTagsHTML  = `<.*?>.*?</.*?>|<.*?>|<!.*?>`
 	regexToRemoveSpaceBeforeColin = `\s+:`
-	regexToRemoveAllComments  = `#.*$`
+	regexToRemoveAllComments      = `#.*$`
 )
 
 type RobotsData struct {
@@ -36,14 +37,22 @@ type RobotsData struct {
 }
 
 type Group struct {
-	rules      []*rule
-	Agent      string
-	CrawlDelay time.Duration
+	rules           []*rule
+	cleanParamRules []*cleanParamRule
+	Agent           string
+	CrawlDelay      time.Duration
 }
 
 type rule struct {
 	path    string
 	allow   bool
+	pattern *regexp.Regexp
+}
+
+// For more information, see https://yandex.ru/support/webmaster/robot-workings/clean-param.html?lang=en
+type cleanParamRule struct {
+	params  []string
+	path    string
 	pattern *regexp.Regexp
 }
 
@@ -380,6 +389,34 @@ func (g *Group) Test(path string) bool {
 	return true
 }
 
+func (g *Group) CleanParams(u *url.URL) *url.URL {
+	r := g.findCleanParamRule(u.Path)
+	if r == nil {
+		return u
+	}
+
+	oldq := u.Query()
+	for oldp := range oldq {
+		for _, p := range r.params {
+			if strings.EqualFold(p, oldp) {
+				delete(oldq, oldp)
+			}
+		}
+	}
+
+	u.RawQuery = oldq.Encode()
+	return u
+}
+
+func (g *Group) CleanParamsString(u string) (string, error) {
+	uu, err := url.Parse(u)
+	if err != nil {
+		return "", err
+	}
+
+	return g.CleanParams(uu).String(), nil
+}
+
 // From Google's spec:
 // The path value is used as a basis to determine whether or not a rule applies
 // to a specific URL on a site. With the exception of wildcards, the path is
@@ -415,6 +452,37 @@ func (g *Group) findRule(path string) (ret *rule) {
 			}
 		}
 	}
+	return
+}
+
+func (g *Group) findCleanParamRule(path string) (ret *cleanParamRule) {
+	var prefixLen int
+
+	for _, r := range g.cleanParamRules {
+		if r.pattern == nil && r.path == "" && prefixLen == 0 {
+			ret = r
+		} else if r.pattern != nil {
+			if r.pattern.MatchString(path) {
+				// Consider this a match equal to the length of the pattern.
+				// From Google's spec:
+				// The order of precedence for rules with wildcards is undefined.
+				if l := len(r.pattern.String()); l > prefixLen {
+					prefixLen = l
+					ret = r
+				}
+			}
+		} else if r.path == "/" && prefixLen == 0 {
+			// Weakest match possible
+			prefixLen = 1
+			ret = r
+		} else if strings.HasPrefix(path, r.path) {
+			if l := len(r.path); l > prefixLen {
+				prefixLen = l
+				ret = r
+			}
+		}
+	}
+
 	return
 }
 

@@ -26,6 +26,7 @@ const (
 	lCrawlDelay
 	lSitemap
 	lHost
+	lCleanParam
 )
 
 type parser struct {
@@ -34,11 +35,12 @@ type parser struct {
 }
 
 type lineInfo struct {
-	t  lineType       // Type of line key
-	k  string         // String representation of the type of key
-	vs string         // String value of the key
-	vf float64        // Float value of the key
-	vr *regexp.Regexp // Regexp value of the key
+	t   lineType       // Type of line key
+	k   string         // String representation of the type of key
+	vs  string         // String value of the key
+	vsc string         // String value was concatenated by & symbol
+	vf  float64        // Float value of the key
+	vr  *regexp.Regexp // Regexp value of the key
 }
 
 func newParser(tokens []string) *parser {
@@ -139,6 +141,26 @@ func (p *parser) parseAll() (groups map[string]*Group, host string, sitemaps []s
 				isEmptyGroup = false
 				delay := time.Duration(li.vf * float64(time.Second))
 				parseGroupMap(groups, agents, func(g *Group) { g.CrawlDelay = delay })
+
+			case lCleanParam:
+				if len(li.vsc) == 0 {
+					continue
+				}
+
+				if len(agents) == 0 {
+					agents = append(agents, "*")
+				}
+
+				isEmptyGroup = false
+				// params to clean always located in li.vs, required
+				r := &cleanParamRule{params: strings.Split(li.vsc, "&"), path: li.vs}
+
+				// regex pattern for url always located in li.vr, if exists
+				if li.vr != nil {
+					r.pattern = li.vr
+				}
+
+				parseGroupMap(groups, agents, func(g *Group) { g.cleanParamRules = append(g.cleanParamRules, r) })
 			}
 		}
 	}
@@ -257,6 +279,29 @@ func (p *parser) parseLine() (li *lineInfo, err error) {
 			cd = 0.0
 		}
 		return &lineInfo{t: lCrawlDelay, k: t1, vf: cd}, nil
+	case "clean-param", "cleanparam", "clean-params":
+		// From https://yandex.ru/support/webmaster/robot-workings/clean-param.html?lang=en
+		p.popToken() // pops t1
+		t3, ok := p.peekToken()
+		if !ok || t3 == tokEOL {
+			return &lineInfo{t: lCleanParam, k: t1, vsc: t2}, nil
+		} else {
+			p.popToken() // pops t2
+			li = &lineInfo{t: lCleanParam, k: t1, vsc: t2}
+			t2 = t3
+			pathVal, err := returnPathVal(lCleanParam)
+			if err != nil {
+				return nil, err
+			}
+
+			if pathVal.vr != nil {
+				li.vr = pathVal.vr
+			} else {
+				li.vs = pathVal.vs
+			}
+
+			return li, nil
+		}
 	}
 
 	// Consume t2 token

@@ -22,6 +22,7 @@ func TestScanner(t *testing.T) {
 		{"# comment \r\n# more comments\n\nDisallow:\r", []string{tokEOL, tokEOL, "Disallow", tokEOL}, 0},
 		{"\xef\xbb\xbfUser-agent: *\n", []string{"User-agent", "*", tokEOL}, 0},
 		{"\xd9\xd9", []string{"\uFFFD\uFFFD"}, 2},
+		{"User-Agent: Yandex\nClean-Param: abc&dfg /path", []string{"User-Agent", "Yandex", tokEOL, "Clean-Param", "abc&dfg", "/path"}, 0},
 	}
 	for i, c := range cases {
 		tag := fmt.Sprintf("test-%d", i)
